@@ -2,6 +2,8 @@ var app = require("express")();
 var http = require("http").createServer(app);
 var io = require("socket.io")(http);
 
+const env = process.env.NODE_ENV || "development";
+
 let clients = {};
 
 function getClients() {
@@ -42,6 +44,8 @@ io.on("connection", (socket) => {
   });
 });
 
-http.listen(3000, () => {
+console.log(process.env.NODE_ENV);
+
+http.listen(process.env.PORT || 3000, () => {
   console.log("listening on *:3000");
 });
