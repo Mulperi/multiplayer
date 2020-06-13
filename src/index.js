@@ -13,11 +13,18 @@ app.get("/", (req, res) => {
 });
 
 io.on("connection", (socket) => {
-  socket.broadcast.emit("clientConnected"); // Others will get info
+  socket.broadcast.emit("broadcastClientConnected", socket.client.id); // Others will get info
   clients[socket.client.id] = {};
   clients[socket.client.id].name = socket.client.id; // Default name
   io.to(socket.client.id).emit("clientId", socket.client.id);
   io.emit("clientsUpdate", getClients());
+
+  socket.on("colorChange", (player, newColor) => {
+    socket.broadcast.emit("broadcastColorChange", player, newColor); // Others will get info
+  });
+  socket.on("nameChange", (oldName, newName) => {
+    socket.broadcast.emit("broadcastNameChange", oldName, newName); // Others will get info
+  });
 
   socket.on("clientUpdate", ({ name, color, x, y }) => {
     clients[socket.client.id] = { name, color, x, y };

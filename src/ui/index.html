@@ -32,6 +32,13 @@
       canvas {
         border: 1px solid grey;
       }
+
+      #console {
+        font-style: italic;
+        padding: 1rem;
+        font-family: "Courier New", Courier, monospace;
+        font-size: 10px;
+      }
     </style>
     <header>
       <h1>Hyper Squad 2027</h1>
@@ -75,6 +82,7 @@
         </div>
       </section>
     </main>
+    <div id="console"></div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -88,7 +96,7 @@
       let settings = {
         width: 300,
         height: 300,
-        speed: 1,
+        speed: 0.5,
         defaultColor: "red",
       };
       c.width = settings.width;
@@ -139,20 +147,20 @@
         }
 
         update() {
-          if (keyPresses["ArrowLeft"]) {
-            this.x -= settings.speed;
-            socket.emit("clientUpdate", this);
-          }
-          if (keyPresses["ArrowRight"]) {
-            this.x += settings.speed;
-            socket.emit("clientUpdate", this);
-          }
-          if (keyPresses["ArrowUp"]) {
+          if (keyPresses["ArrowUp"] || keyPresses["w"]) {
             this.y -= settings.speed;
             socket.emit("clientUpdate", this);
           }
-          if (keyPresses["ArrowDown"]) {
+          if (keyPresses["ArrowLeft"] || keyPresses["a"]) {
+            this.x -= settings.speed;
+            socket.emit("clientUpdate", this);
+          }
+          if (keyPresses["ArrowDown"] || keyPresses["s"]) {
             this.y += settings.speed;
+            socket.emit("clientUpdate", this);
+          }
+          if (keyPresses["ArrowRight"] || keyPresses["d"]) {
+            this.x += settings.speed;
             socket.emit("clientUpdate", this);
           }
 
@@ -209,15 +217,26 @@
       const userCount = document.getElementById("userCount");
       const userListDiv = document.getElementById("userlist");
 
+      const consoleDiv = document.getElementById("console");
+
+      /**
+       * Custom functions
+       */
+      function consoleWrite(message) {
+        consoleDiv.innerHTML = message;
+      }
+
       /**
        * Event listeners
        */
       buttonNameSet.addEventListener("click", (e) => {
+        socket.emit("nameChange", player.name, inputName.value);
         player.setName(inputName.value);
         socket.emit("clientUpdate", player);
       });
       selectColor.addEventListener("change", (e) => {
         player.setColor(e.target.value);
+        socket.emit("colorChange", player.name, e.target.value);
         socket.emit("clientUpdate", player);
       });
       // buttonColorSet.addEventListener("click", (e) => {
@@ -247,8 +266,15 @@
         });
         userCount.innerHTML = clients.length;
       });
-      socket.on("clientConnected", (client) => {
+      socket.on("broadcastClientConnected", (client) => {
         console.log("someone connected");
+        consoleWrite(client + " connected");
+      });
+      socket.on("broadcastColorChange", (player, color) => {
+        consoleWrite(player + " changed color to " + color);
+      });
+      socket.on("broadcastNameChange", (oldName, newName) => {
+        consoleWrite(oldName + " changed name to  " + newName);
       });
     </script>
   </body>
