@@ -33,8 +33,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
+    socket.broadcast.emit(
+      "broadcastClientDisconnected",
+      clients[socket.client.id].name
+    );
     delete clients[socket.client.id];
-    socket.broadcast.emit("user disconnected");
     io.emit("clientsUpdate", getClients());
   });
 });

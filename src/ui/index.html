@@ -34,7 +34,9 @@
       }
 
       #console {
-        font-style: italic;
+        background: #464646;
+        color: rgb(81, 255, 0);
+        /* font-style: italic; */
         padding: 1rem;
         font-family: "Courier New", Courier, monospace;
         font-size: 10px;
@@ -223,7 +225,7 @@
        * Custom functions
        */
       function consoleWrite(message) {
-        consoleDiv.innerHTML = message;
+        consoleDiv.innerHTML = message + "<br />" + consoleDiv.innerHTML;
       }
 
       /**
@@ -275,6 +277,9 @@
       });
       socket.on("broadcastNameChange", (oldName, newName) => {
         consoleWrite(oldName + " changed name to  " + newName);
+      });
+      socket.on("broadcastClientDisconnected", (name) => {
+        consoleWrite(name + " left");
       });
     </script>
   </body>
