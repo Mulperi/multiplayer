@@ -26,14 +26,14 @@
       main {
         display: flex;
         flex-wrap: wrap;
-        justify-content: space-between;
+        justify-content: space-evenly;
         padding: 1rem;
       }
       canvas {
         border: 1px solid grey;
       }
 
-      #console {
+      #activityLog {
         background: #464646;
         color: rgb(81, 255, 0);
         /* font-style: italic; */
@@ -84,7 +84,9 @@
         </div>
       </section>
     </main>
-    <div id="console"></div>
+    <div>
+      <ul id="activityLog"></ul>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -225,7 +227,11 @@
        * Custom functions
        */
       function consoleWrite(message) {
-        consoleDiv.innerHTML = message + "<br />" + consoleDiv.innerHTML;
+        activityLog.innerHTML =
+          "<li>" + message + "</li>" + activityLog.innerHTML;
+        if (activityLog.childNodes.length > 9) {
+          activityLog.removeChild(activityLog.lastElementChild);
+        }
       }
 
       /**
@@ -235,6 +241,7 @@
         socket.emit("nameChange", player.name, inputName.value);
         player.setName(inputName.value);
         socket.emit("clientUpdate", player);
+        localStorage.setItem("playername", inputName.value);
       });
       selectColor.addEventListener("change", (e) => {
         player.setColor(e.target.value);
@@ -255,9 +262,15 @@
        * Socket events
        **/
       socket.on("clientId", (clientId) => {
-        // console.log("client id", clientId);
-        inputName.value = clientId;
-        player.setName(inputName.value);
+        const savedName = localStorage.getItem("playername");
+        let name;
+        if (savedName) {
+          name = savedName;
+        } else {
+          name = clientId;
+        }
+        inputName.value = name;
+        player.setName(name);
         socket.emit("clientUpdate", player);
       });
       socket.on("clientsUpdate", (updatedClients) => {

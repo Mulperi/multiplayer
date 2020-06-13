@@ -20,10 +20,10 @@ io.on("connection", (socket) => {
   io.emit("clientsUpdate", getClients());
 
   socket.on("colorChange", (player, newColor) => {
-    socket.broadcast.emit("broadcastColorChange", player, newColor); // Others will get info
+    io.emit("broadcastColorChange", player, newColor); // Others will get info
   });
   socket.on("nameChange", (oldName, newName) => {
-    socket.broadcast.emit("broadcastNameChange", oldName, newName); // Others will get info
+    io.emit("broadcastNameChange", oldName, newName); // Others will get info
   });
 
   socket.on("clientUpdate", ({ name, color, x, y }) => {
