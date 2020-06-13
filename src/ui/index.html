@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Socket.io test</title>
+  </head>
+  <body>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Metal+Mania&family=Roboto&display=swap");
+      body {
+        background: whitesmoke;
+        font-family: "Roboto", sans-serif;
+        margin: 0;
+        font-size: 16px;
+      }
+      header {
+        margin-bottom: 1rem;
+        background: rgb(224, 224, 224);
+        padding: 1rem;
+      }
+      header h1 {
+        margin-top: 0;
+      }
+
+      main {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        padding: 1rem;
+      }
+      canvas {
+        border: 1px solid grey;
+      }
+    </style>
+    <header>
+      <h1>Hyper Squad 2027</h1>
+      <div>
+        <label for="inputName">Alias:</label><br />
+        <input id="inputName" type="text" />
+        <button id="buttonNameSet">Set</button>
+      </div>
+      <div>
+        <label for="selectColor">Color:</label><br />
+        <!-- <input id="inputColor" type="text" /> -->
+        <!-- <button id="buttonColorSet">Set</button> -->
+        <select name="color" id="selectColor">
+          <option value="red">red</option>
+          <option value="blue">blue</option>
+          <option value="green">green</option>
+          <option value="yellow">yellow</option>
+          <option value="orange">orange</option>
+          <option value="gold">gold</option>
+          <option value="teal">teal</option>
+          <option value="dodgerblue">dodgerblue</option>
+          <option value="magenta">magenta</option>
+          <option value="blueviolet">blueviolet</option>
+          <option value="crimson">crimson</option>
+          <option value="deeppink">deeppink</option>
+          <option value="hotpink">hotpink</option>
+          <option value="turquoise">turquoise</option>
+          <option value="lime">lime</option>
+          <option value="mediumspringgreen">mediumspringgreen</option>
+        </select>
+      </div>
+    </header>
+    <main>
+      <section>
+        <canvas id="canvas">no js, suck balls</canvas>
+      </section>
+      <section>
+        <h4>All users (<span id="userCount">0</span>)</h4>
+        <div>
+          <ul id="userlist"></ul>
+        </div>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io.connect("http://localhost:3000");
+
+      /**
+       * Canvas settings
+       */
+      const c = document.getElementById("canvas");
+      const ctx = c.getContext("2d");
+      let settings = {
+        width: 300,
+        height: 300,
+        speed: 1,
+        defaultColor: "red",
+      };
+      c.width = settings.width;
+      c.height = settings.height;
+
+      let clients = []; // Will hold client objects
+
+      /**
+       * Player and animation settings
+       */
+      let keyPresses = {};
+
+      function listenKeyboard() {
+        document.addEventListener("keyup", keyUp);
+        document.addEventListener("keydown", keyDown);
+      }
+
+      const keyUp = (e) => {
+        keyPresses[e.key] = false;
+      };
+
+      const keyDown = (e) => {
+        keyPresses[e.key] = true;
+      };
+
+      class Player {
+        constructor(x, y, radius) {
+          this.x = x;
+          this.y = y;
+          this.radius = radius;
+          this.color = settings.defaultColor;
+        }
+
+        setColor(color) {
+          this.color = color;
+        }
+
+        setName(name) {
+          this.name = name;
+        }
+
+        draw() {
+          ctx.fillStyle = this.color;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        update() {
+          if (keyPresses["ArrowLeft"]) {
+            this.x -= settings.speed;
+            socket.emit("clientUpdate", this);
+          }
+          if (keyPresses["ArrowRight"]) {
+            this.x += settings.speed;
+            socket.emit("clientUpdate", this);
+          }
+          if (keyPresses["ArrowUp"]) {
+            this.y -= settings.speed;
+            socket.emit("clientUpdate", this);
+          }
+          if (keyPresses["ArrowDown"]) {
+            this.y += settings.speed;
+            socket.emit("clientUpdate", this);
+          }
+
+          // Screen bounds
+          if (this.x < 0 + this.radius) this.x = 0 + this.radius;
+          if (this.y < 0 + this.radius) this.y = 0 + this.radius;
+          if (this.x > settings.width - this.radius)
+            this.x = settings.width - this.radius;
+          if (this.y > settings.height - this.radius)
+            this.y = settings.width - this.radius;
+        }
+      }
+
+      let player = new Player(25, 25, 10);
+
+      function clientsDraw() {
+        if (clients.length > 0) {
+          clients.forEach((c) => {
+            ctx.fillStyle = c.color;
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, 10, 0, Math.PI * 2, false);
+            ctx.closePath();
+            ctx.fill();
+            ctx.font = "10px Arial";
+            ctx.fillText(c.name, c.x, c.y + 20);
+          });
+        }
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, settings.width, settings.height);
+        // player.draw();
+        clientsDraw();
+      }
+
+      function update() {
+        draw();
+        listenKeyboard();
+        player.update();
+        requestAnimationFrame(update);
+      }
+      requestAnimationFrame(update);
+
+      /**
+       * Get needed elements
+       */
+      const buttonNameSet = document.getElementById("buttonNameSet");
+      const inputName = document.getElementById("inputName");
+
+      const selectColor = document.getElementById("selectColor");
+      // const buttonColorSet = document.getElementById("buttonColorSet");
+      // const inputColor = document.getElementById("inputColor");
+
+      const userCount = document.getElementById("userCount");
+      const userListDiv = document.getElementById("userlist");
+
+      /**
+       * Event listeners
+       */
+      buttonNameSet.addEventListener("click", (e) => {
+        player.setName(inputName.value);
+        socket.emit("clientUpdate", player);
+      });
+      selectColor.addEventListener("change", (e) => {
+        player.setColor(e.target.value);
+        socket.emit("clientUpdate", player);
+      });
+      // buttonColorSet.addEventListener("click", (e) => {
+      //   player.setColor(inputColor.value);
+      //   socket.emit("clientUpdate", player);
+      // });
+      inputName.addEventListener("keyup", function (event) {
+        if (event.keyCode === 13) {
+          buttonNameSet.click();
+        }
+      });
+
+      /**
+       * Socket events
+       **/
+      socket.on("clientId", (clientId) => {
+        // console.log("client id", clientId);
+        inputName.value = clientId;
+        player.setName(inputName.value);
+        socket.emit("clientUpdate", player);
+      });
+      socket.on("clientsUpdate", (updatedClients) => {
+        userListDiv.innerHTML = "";
+        clients = updatedClients;
+        clients.forEach((c) => {
+          userListDiv.innerHTML += "<li>" + c.name + "</li>";
+        });
+        userCount.innerHTML = clients.length;
+      });
+      socket.on("clientConnected", (client) => {
+        console.log("someone connected");
+      });
+    </script>
+  </body>
+</html>
