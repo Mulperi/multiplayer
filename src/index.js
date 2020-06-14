@@ -5,6 +5,15 @@ var io = require("socket.io")(http);
 const env = process.env.NODE_ENV || "development";
 
 let clients = {};
+let activityLog = [];
+
+function updateActivityLog(activity) {
+  activityLog.unshift(activity);
+  if (activityLog.length > 19) {
+    activityLog = activityLog.slice(0, 19);
+  }
+  console.log(activityLog)
+}
 
 function getClients() {
   return Object.keys(clients).map((id) => clients[id]);
@@ -15,17 +24,20 @@ app.get("/", (req, res) => {
 });
 
 io.on("connection", (socket) => {
-  socket.broadcast.emit("broadcastClientConnected", socket.client.id); // Others will get info
+  updateActivityLog({ type: "connect", client: socket.client.id });
+  io.emit("activityLogUpdate", activityLog);
   clients[socket.client.id] = {};
   clients[socket.client.id].name = socket.client.id; // Default name
   io.to(socket.client.id).emit("clientId", socket.client.id);
   io.emit("clientsUpdate", getClients());
 
-  socket.on("colorChange", (player, newColor) => {
-    io.emit("broadcastColorChange", player, newColor); // Others will get info
+  socket.on("colorChange", (client, newColor) => {
+    updateActivityLog({ type: "colorChange", client, newColor });
+    io.emit("activityLogUpdate", activityLog);
   });
   socket.on("nameChange", (oldName, newName) => {
-    io.emit("broadcastNameChange", oldName, newName); // Others will get info
+    updateActivityLog({ type: "nameChange", oldName, newName });
+    io.emit("activityLogUpdate", activityLog);
   });
 
   socket.on("clientUpdate", ({ name, color, x, y }) => {
@@ -35,10 +47,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    socket.broadcast.emit(
-      "broadcastClientDisconnected",
-      clients[socket.client.id].name
-    );
+    updateActivityLog({
+      type: "disconnect",
+      client: clients[socket.client.id].name,
+    });
+    io.emit("activityLogUpdate", activityLog);
     delete clients[socket.client.id];
     io.emit("clientsUpdate", getClients());
   });

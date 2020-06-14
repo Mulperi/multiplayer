@@ -8,6 +8,10 @@
   <body>
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Metal+Mania&family=Roboto&display=swap");
+      html,
+      body {
+        height: 100%;
+      }
       body {
         background: whitesmoke;
         font-family: "Roboto", sans-serif;
@@ -28,22 +32,36 @@
         flex-wrap: wrap;
         justify-content: space-evenly;
         padding: 1rem;
+        flex: 1;
+        /* height: 100%; */
       }
       canvas {
         border: 1px solid grey;
       }
 
-      #activityLog {
+      ul {
+        margin: 1rem;
+        padding: 1rem;
+      }
+      #activityLogListElement {
+        /* font-style: italic; */
+        font-family: "Courier New", Courier, monospace;
+        font-size: 14px;
+      }
+
+      section {
+        border: 1px solid grey;
+        border-radius: 4px;
+        padding: 1rem;
+      }
+
+      .dark {
         background: #464646;
         color: rgb(81, 255, 0);
-        /* font-style: italic; */
-        padding: 1rem;
-        font-family: "Courier New", Courier, monospace;
-        font-size: 10px;
       }
     </style>
     <header>
-      <h1>Hyper Squad 2027</h1>
+      <h1>Multiplayer demo</h1>
       <div>
         <label for="inputName">Alias:</label><br />
         <input id="inputName" type="text" />
@@ -67,30 +85,29 @@
           <option value="crimson">crimson</option>
           <option value="deeppink">deeppink</option>
           <option value="hotpink">hotpink</option>
-          <option value="turquoise">turquoise</option>
-          <option value="lime">lime</option>
-          <option value="mediumspringgreen">mediumspringgreen</option>
         </select>
       </div>
     </header>
     <main>
       <section>
+        <h4>Play area</h4>
         <canvas id="canvas">no js, suck balls</canvas>
       </section>
       <section>
-        <h4>All users (<span id="userCount">0</span>)</h4>
+        <h4>Users (<span id="userCount">0</span>)</h4>
         <div>
           <ul id="userlist"></ul>
         </div>
       </section>
+      <section class="dark">
+        <h4>Activity log</h4>
+        <ul id="activityLogListElement"></ul>
+      </section>
     </main>
-    <div>
-      <ul id="activityLog"></ul>
-    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-      const socket = io.connect("https://hyperwarriors.herokuapp.com/"); // Change to http://localhost:3000 
+      const socket = io.connect("https://hyperwarriors.herokuapp.com/"); // Change to http://localhost:3000
 
       /**
        * Canvas settings
@@ -213,25 +230,41 @@
        */
       const buttonNameSet = document.getElementById("buttonNameSet");
       const inputName = document.getElementById("inputName");
-
       const selectColor = document.getElementById("selectColor");
-      // const buttonColorSet = document.getElementById("buttonColorSet");
-      // const inputColor = document.getElementById("inputColor");
-
       const userCount = document.getElementById("userCount");
       const userListDiv = document.getElementById("userlist");
-
-      const consoleDiv = document.getElementById("console");
+      const activityLogListElement = document.getElementById(
+        "activityLogListElement"
+      );
 
       /**
        * Custom functions
        */
-      function consoleWrite(message) {
-        activityLog.innerHTML =
-          "<li>" + message + "</li>" + activityLog.innerHTML;
-        if (activityLog.childNodes.length > 9) {
-          activityLog.removeChild(activityLog.lastElementChild);
-        }
+      function activityLogUpdate(newActivityLog) {
+        activityLogListElement.innerHTML = "";
+        newActivityLog.forEach((a) => {
+          let message;
+          switch (a.type) {
+            case "connect":
+              message = a.client + " connected";
+              break;
+            case "disconnect":
+              message = a.client + " left";
+              break;
+            case "nameChange":
+              message = a.oldName + " changed name to " + a.newName;
+              break;
+            case "colorChange":
+              message = a.client + " changed color to " + a.newColor;
+              break;
+
+            default:
+              break;
+          }
+
+          activityLogListElement.innerHTML =
+            activityLogListElement.innerHTML + " <li>" + message + "</li>";
+        });
       }
 
       /**
@@ -248,10 +281,6 @@
         socket.emit("colorChange", player.name, e.target.value);
         socket.emit("clientUpdate", player);
       });
-      // buttonColorSet.addEventListener("click", (e) => {
-      //   player.setColor(inputColor.value);
-      //   socket.emit("clientUpdate", player);
-      // });
       inputName.addEventListener("keyup", function (event) {
         if (event.keyCode === 13) {
           buttonNameSet.click();
@@ -281,18 +310,8 @@
         });
         userCount.innerHTML = clients.length;
       });
-      socket.on("broadcastClientConnected", (client) => {
-        console.log("someone connected");
-        consoleWrite(client + " connected");
-      });
-      socket.on("broadcastColorChange", (player, color) => {
-        consoleWrite(player + " changed color to " + color);
-      });
-      socket.on("broadcastNameChange", (oldName, newName) => {
-        consoleWrite(oldName + " changed name to  " + newName);
-      });
-      socket.on("broadcastClientDisconnected", (name) => {
-        consoleWrite(name + " left");
+      socket.on("activityLogUpdate", (newActivityLog) => {
+        activityLogUpdate(newActivityLog);
       });
     </script>
   </body>
